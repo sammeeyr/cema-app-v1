@@ -1,0 +1,6 @@
+{
+  "name": "CEMA App",
+  "description": "A clean, distraction-free church and Bible study app. Read. Study. Pray. Give.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
