@@ -132,10 +132,27 @@ class CemaViewModel(application: Application) : AndroidViewModel(application), T
     // --- User Profile State ---
     val isUserSignedIn = MutableStateFlow(false)
     val userName = MutableStateFlow("Guest")
-    val userEmail = MutableStateFlow("")
+    val userEmail = MutableStateFlow("user@cema.org")
     val userPhone = MutableStateFlow("+234 812 345 6789")
     val churchUnit = MutableStateFlow("Media & Worship Ministry")
     val userLocation = MutableStateFlow("Lagos, Nigeria")
+    val profilePictureUri = MutableStateFlow<String?>(null)
+
+    fun updateUserProfile(
+        name: String,
+        email: String,
+        phone: String,
+        unit: String,
+        location: String,
+        pictureUri: String?
+    ) {
+        userName.value = name
+        userEmail.value = email
+        userPhone.value = phone
+        churchUnit.value = unit
+        userLocation.value = location
+        profilePictureUri.value = pictureUri
+    }
 
     // --- Settings State ---
     val selectedBibleVersion = MutableStateFlow("KJV")
@@ -221,17 +238,19 @@ class CemaViewModel(application: Application) : AndroidViewModel(application), T
     }
 
     
-    fun signInWithGoogle(context: android.content.Context) {
+    fun signInWithGoogle(context: android.content.Context, selectedAccountEmail: String? = null) {
         viewModelScope.launch {
             val authManager = com.example.ui.AuthManager(context)
-            val idToken = authManager.signInWithGoogle()
-            if (idToken != null) {
-                // Usually we authenticate with Firebase here
+            val userInfo = authManager.signInWithGoogle(selectedAccountEmail)
+            if (userInfo != null) {
                 isUserSignedIn.value = true
-                userName.value = "User"
-                userEmail.value = "user@gmail.com"
-            } else {
-                errorMessage.value = "Failed to sign in"
+                userEmail.value = userInfo.email
+                if (!userInfo.displayName.isNullOrBlank()) {
+                    userName.value = userInfo.displayName
+                }
+                if (!userInfo.photoUrl.isNullOrEmpty()) {
+                    profilePictureUri.value = userInfo.photoUrl
+                }
             }
         }
     }

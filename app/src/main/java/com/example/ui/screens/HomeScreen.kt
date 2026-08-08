@@ -26,8 +26,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.ui.viewmodel.CemaTab
 import com.example.ui.viewmodel.CemaViewModel
 
@@ -38,6 +40,7 @@ fun HomeScreen(
 ) {
     val scrollState = rememberScrollState()
     val userName by viewModel.userName.collectAsState()
+    val profilePictureUri by viewModel.profilePictureUri.collectAsState()
     val selectedLesson by viewModel.selectedLesson.collectAsState()
     val highlights by viewModel.highlightsList.collectAsState()
     val bookmarks by viewModel.bookmarksList.collectAsState()
@@ -79,11 +82,20 @@ fun HomeScreen(
                     .clickable { onNavigateTab(CemaTab.PROFILE) },
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = userName.take(1),
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+                if (!profilePictureUri.isNullOrEmpty()) {
+                    AsyncImage(
+                        model = profilePictureUri,
+                        contentDescription = "Profile Picture",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Text(
+                        text = if (userName.isNotBlank()) userName.take(1).uppercase() else "G",
+                        style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
             }
         }
 
