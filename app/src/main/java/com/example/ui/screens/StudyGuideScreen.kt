@@ -45,6 +45,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.HighlightYellow
 import com.example.ui.viewmodel.CemaViewModel
+import com.example.util.BibleReferenceParser
 
 private fun highlightStudyText(text: String, query: String, color: Color): AnnotatedString {
     if (query.isBlank()) return AnnotatedString(text)
@@ -319,15 +320,28 @@ fun StudyGuideScreen(
                             )
 
                             Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.surface
+                                onClick = { viewModel.openBiblePassage(currentLesson.effectiveReadPassage) },
+                                shape = RoundedCornerShape(20.dp),
+                                color = MaterialTheme.colorScheme.surface,
+                                shadowElevation = 2.dp
                             ) {
-                                Text(
-                                    text = currentLesson.readPassage,
-                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.MenuBook,
+                                        contentDescription = "Read in Bible",
+                                        modifier = Modifier.size(14.dp),
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = currentLesson.effectiveReadPassage,
+                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
                             }
                         }
 
@@ -356,30 +370,56 @@ fun StudyGuideScreen(
             // Memory Verse Box
             item {
                 Card(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.openBiblePassage(currentLesson.effectiveMemoryVerse) },
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     border = CardDefaults.outlinedCardBorder(),
                     shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Outlined.FormatQuote,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = "MEMORY VERSE (${currentLesson.memoryVerse})",
-                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
-                                color = MaterialTheme.colorScheme.primary
-                            )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Outlined.FormatQuote,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = "MEMORY VERSE (${currentLesson.effectiveMemoryVerse})",
+                                    style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
+
+                            TextButton(
+                                onClick = { viewModel.openBiblePassage(currentLesson.effectiveMemoryVerse) },
+                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.MenuBook,
+                                    contentDescription = "Open Bible",
+                                    modifier = Modifier.size(14.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Open Bible",
+                                    style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
 
                         Text(
-                            text = "“${currentLesson.memoryVerseText}”",
+                            text = "“${currentLesson.memoryVerseText.ifBlank { "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life." }}”",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 fontFamily = FontFamily.Serif,
                                 lineHeight = 22.sp
@@ -400,6 +440,10 @@ fun StudyGuideScreen(
             }
 
             items(currentLesson.paragraphs) { paragraph ->
+                val scriptureMatches = remember(paragraph) {
+                    BibleReferenceParser.findScriptureMatches(paragraph)
+                }
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -419,7 +463,46 @@ fun StudyGuideScreen(
                             color = MaterialTheme.colorScheme.onSurface
                         )
 
-                        Spacer(modifier = Modifier.height(10.dp))
+                        if (scriptureMatches.isNotEmpty()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Text(
+                                text = "Scripture References in Paragraph:",
+                                style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(scriptureMatches) { match ->
+                                    AssistChip(
+                                        onClick = { viewModel.openBiblePassage(match.parsedRef.toDisplayString()) },
+                                        label = {
+                                            Text(
+                                                text = match.parsedRef.toDisplayString(),
+                                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Outlined.MenuBook,
+                                                contentDescription = "Open in Bible",
+                                                modifier = Modifier.size(14.dp),
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        },
+                                        colors = AssistChipDefaults.assistChipColors(
+                                            containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                            labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                        )
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -428,7 +511,7 @@ fun StudyGuideScreen(
                             Text(
                                 text = "Tap paragraph for actions",
                                 style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.outline
                             )
                         }
                     }
@@ -457,20 +540,49 @@ fun StudyGuideScreen(
                         Spacer(modifier = Modifier.height(12.dp))
 
                         currentLesson.questions.forEachIndexed { idx, q ->
-                            Row(
-                                modifier = Modifier.padding(vertical = 4.dp),
-                                verticalAlignment = Alignment.Top
-                            ) {
-                                Text(
-                                    text = "${idx + 1}. ",
-                                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                                    color = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = q,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
+                            val qScriptureMatches = remember(q) {
+                                BibleReferenceParser.findScriptureMatches(q)
+                            }
+
+                            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                                Row(verticalAlignment = Alignment.Top) {
+                                    Text(
+                                        text = "${idx + 1}. ",
+                                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = q,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+
+                                if (qScriptureMatches.isNotEmpty()) {
+                                    Row(
+                                        modifier = Modifier.padding(start = 20.dp, top = 4.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        qScriptureMatches.forEach { match ->
+                                            SuggestionChip(
+                                                onClick = { viewModel.openBiblePassage(match.parsedRef.toDisplayString()) },
+                                                label = {
+                                                    Text(
+                                                        text = "Read ${match.parsedRef.toDisplayString()}",
+                                                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                                                    )
+                                                },
+                                                icon = {
+                                                    Icon(
+                                                        imageVector = Icons.Outlined.MenuBook,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
 
@@ -546,6 +658,10 @@ fun StudyGuideScreen(
     // Paragraph Actions Bottom Sheet
     if (showParagraphActionModal != null) {
         val paragraphText = showParagraphActionModal!!
+        val paragraphScriptures = remember(paragraphText) {
+            BibleReferenceParser.findScriptureMatches(paragraphText)
+        }
+
         ModalBottomSheet(
             onDismissRequest = { showParagraphActionModal = null }
         ) {
@@ -568,6 +684,38 @@ fun StudyGuideScreen(
                     maxLines = 3,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+
+                if (paragraphScriptures.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text = "Referenced Bible Passages:",
+                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Spacer(modifier = Modifier.height(6.dp))
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(paragraphScriptures) { match ->
+                            Button(
+                                onClick = {
+                                    showParagraphActionModal = null
+                                    viewModel.openBiblePassage(match.parsedRef.toDisplayString())
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                            ) {
+                                Icon(Icons.Outlined.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text("Open ${match.parsedRef.toDisplayString()}")
+                            }
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
 

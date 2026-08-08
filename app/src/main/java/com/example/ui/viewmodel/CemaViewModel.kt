@@ -196,9 +196,67 @@ class CemaViewModel(application: Application) : AndroidViewModel(application), T
         loadVerses()
     }
 
+    fun openBiblePassage(rawReference: String) {
+        val parsed = com.example.util.BibleReferenceParser.parseReference(rawReference)
+        if (parsed != null) {
+            openBiblePassage(parsed.book, parsed.chapter, parsed.verse)
+        } else {
+            _selectedTab.value = CemaTab.BIBLE
+        }
+    }
+
+    fun openBiblePassage(book: String, chapter: Int, verse: Int? = null) {
+        val canonicalBook = bibleRepository.books.find { it.name.equals(book, ignoreCase = true) }?.name ?: book
+        selectedBook.value = canonicalBook
+        selectedChapter.value = chapter
+        loadVerses()
+        if (verse != null) {
+            viewModelScope.launch(exceptionHandler) {
+                val versesList = bibleRepository.getVerses(canonicalBook, chapter, selectedBibleVersion.value)
+                val targetVerse = versesList.find { it.verse == verse }
+                if (targetVerse != null) {
+                    selectedVerseForBottomSheet.value = targetVerse
+                }
+            }
+        }
+        _selectedTab.value = CemaTab.BIBLE
+    }
+
     fun setBibleVersion(version: String) {
         selectedBibleVersion.value = version
         loadVerses()
+    }
+
+    fun nextChapter() {
+        val currentBookObj = bibleRepository.books.find { it.name == selectedBook.value }
+        val maxCh = currentBookObj?.chapterCount ?: 1
+        if (selectedChapter.value < maxCh) {
+            selectedChapter.value += 1
+            loadVerses()
+        } else {
+            val currentIndex = bibleRepository.books.indexOfFirst { it.name == selectedBook.value }
+            if (currentIndex != -1 && currentIndex < bibleRepository.books.lastIndex) {
+                val nextBook = bibleRepository.books[currentIndex + 1]
+                selectedBook.value = nextBook.name
+                selectedChapter.value = 1
+                loadVerses()
+            }
+        }
+    }
+
+    fun previousChapter() {
+        if (selectedChapter.value > 1) {
+            selectedChapter.value -= 1
+            loadVerses()
+        } else {
+            val currentIndex = bibleRepository.books.indexOfFirst { it.name == selectedBook.value }
+            if (currentIndex > 0) {
+                val prevBook = bibleRepository.books[currentIndex - 1]
+                selectedBook.value = prevBook.name
+                selectedChapter.value = prevBook.chapterCount
+                loadVerses()
+            }
+        }
     }
 
     fun loadVerses() {

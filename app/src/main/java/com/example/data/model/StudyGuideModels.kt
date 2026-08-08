@@ -1,5 +1,7 @@
 package com.example.data.model
 
+import com.example.util.BibleReferenceParser
+
 data class StudyGuide(
     val id: String,
     val title: String,
@@ -21,5 +23,23 @@ data class StudyLesson(
     val questions: List<String>,
     val reflection: String,
     val prayer: String
-)
+) {
+    val effectiveReadPassage: String
+        get() {
+            if (readPassage.isNotBlank()) return readPassage
+            val match = BibleReferenceParser.findScriptureMatches(
+                paragraphs.joinToString(" ") + " " + questions.joinToString(" ")
+            ).firstOrNull()
+            return match?.parsedRef?.toDisplayString() ?: "John 3"
+        }
+
+    val effectiveMemoryVerse: String
+        get() {
+            if (memoryVerse.isNotBlank()) return memoryVerse
+            val match = BibleReferenceParser.findScriptureMatches(
+                paragraphs.joinToString(" ") + " " + questions.joinToString(" ")
+            ).firstOrNull()
+            return match?.parsedRef?.toDisplayString() ?: "John 3:16"
+        }
+}
 

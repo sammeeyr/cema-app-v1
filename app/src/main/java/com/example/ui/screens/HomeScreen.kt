@@ -44,6 +44,7 @@ fun HomeScreen(
     val selectedLesson by viewModel.selectedLesson.collectAsState()
     val highlights by viewModel.highlightsList.collectAsState()
     val bookmarks by viewModel.bookmarksList.collectAsState()
+    var showShareDialog by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -263,8 +264,32 @@ fun HomeScreen(
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
+
+                    IconButton(
+                        onClick = { showShareDialog = true }
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Share,
+                            contentDescription = "Share Verse",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
+        }
+
+        if (showShareDialog) {
+            val verseOfTheDay = com.example.data.model.BibleVerse(
+                book = "John", chapter = 3, verse = 16,
+                text = "For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life.",
+                translation = "KJV"
+            )
+            com.example.ui.components.VerseShareDialog(
+                verseText = verseOfTheDay.text,
+                reference = "${verseOfTheDay.book} ${verseOfTheDay.chapter}:${verseOfTheDay.verse}",
+                version = "KJV",
+                onDismiss = { showShareDialog = false }
+            )
         }
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -478,11 +503,36 @@ fun HomeScreen(
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Text(
-                    text = "Memory Verse: ${selectedLesson.memoryVerse}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "Memory Verse: ${selectedLesson.effectiveMemoryVerse}",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    TextButton(
+                        onClick = { viewModel.openBiblePassage(selectedLesson.effectiveMemoryVerse) },
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = androidx.compose.material.icons.Icons.Outlined.MenuBook,
+                            contentDescription = "Read in Bible",
+                            modifier = Modifier.size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "Read in Bible",
+                            style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                }
             }
         }
 
